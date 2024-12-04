@@ -3,6 +3,7 @@
 A robust RESTful API for an e-commerce platform implementing clean architecture, proper error handling, and database optimization. This project was developed as part of an internship assignment for Imagined.
 
 ## 🌐 Live API
+
 Base URL: https://ecommerce-api-6jmm.onrender.com
 
 ## 🛠 Technology Stack
@@ -16,20 +17,43 @@ Base URL: https://ecommerce-api-6jmm.onrender.com
 - **Version Control**: Git
 - **Development Tools**: Docker (for local PostgreSQL)
 
+## 🧪 Testing with Postman
+
+### Quick Start
+
+1. Download and import the [Postman Collection](./postman_collection.json)
+2. Set up your environment in Postman:
+   - Base URL: `https://ecommerce-api-6jmm.onrender.com`
+
+### Testing Flow
+
+1. Create a user and save the returned `id`
+2. Create a product and save the returned `id`
+3. Create orders using both approaches:
+   - Transaction-based: `/api/orders`
+   - Optimistic locking: `/api/orders/optimistic`
+
+### Alternative: Ready-to-Use Collection
+
+[<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://god.gw.postman.com/run-collection/32163632-3698eb96-f87d-4d5a-96a7-9e32aeb2a8a0?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D32163632-3698eb96-f87d-4d5a-96a7-9e32aeb2a8a0%26entityType%3Dcollection%26workspaceId%3D6dba05e0-8c32-490c-b214-47e361ec64b0)
+
 ## 📋 Features
 
 ### User Management
+
 - Create new users
 - Update user information
 - Get user details
 
 ### Product Management
+
 - Create new products
 - Update product information
 - Get product details
 - Get total stock quantity across all products
 
 ### Order Management
+
 - Create new orders with two stock management approaches:
   - Transaction-based (default)
   - Optimistic locking (for high concurrency)
@@ -39,26 +63,10 @@ Base URL: https://ecommerce-api-6jmm.onrender.com
 - Get all orders for a specific user
 - Get all users who bought a specific product
 
-## 🏗 Project Structure
-
-```
-src/
-  ├── controllers/
-  │   ├── userController.ts
-  │   ├── productController.ts
-  │   └── orderController.ts
-  ├── routes/
-  │   ├── userRoutes.ts
-  │   ├── productRoutes.ts
-  │   └── orderRoutes.ts
-  └── index.ts
-prisma/
-  └── schema.prisma
-```
-
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Bun installed
 - Docker installed (for local PostgreSQL)
 - Git
@@ -66,28 +74,33 @@ prisma/
 ### Local Development Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/itsOmSarraf/ecommerce-api.git
 cd ecommerce-api
 ```
 
 2. Install dependencies:
+
 ```bash
 bun install
 ```
 
 3. Start PostgreSQL using Docker:
+
 ```bash
 docker-compose up -d
 ```
 
 4. Set up the database:
+
 ```bash
 bunx prisma generate
 bunx prisma migrate dev
 ```
 
 5. Start the development server:
+
 ```bash
 bun dev
 ```
@@ -190,6 +203,7 @@ curl https://ecommerce-api-6jmm.onrender.com/api/orders/product/:productId/buyer
 ### 1. Stock Management Approaches
 
 #### Transaction-based Approach (Default)
+
 - Uses Prisma transactions for atomicity
 - Locks relevant rows during operation
 - Guarantees data consistency
@@ -205,6 +219,7 @@ const order = await prisma.$transaction(async (prisma) => {
 ```
 
 #### Optimistic Locking Approach
+
 - No database locks
 - Retries on conflicts (up to 3 times)
 - Better performance in high-concurrency situations
@@ -227,12 +242,14 @@ while (retries > 0) {
 ```
 
 ### 2. Database Optimization
+
 - Proper indexing on foreign keys
 - Efficient queries using Prisma's features
 - Transaction management for data consistency
 - Relationship management between entities
 
 ### 3. Error Handling
+
 - Comprehensive error handling for all endpoints
 - Proper HTTP status codes
 - Informative error messages
@@ -252,6 +269,7 @@ while (retries > 0) {
 ## 📚 Additional Notes
 
 The project demonstrates:
+
 - Clean code architecture
 - RESTful API design principles
 - Database relationship management
