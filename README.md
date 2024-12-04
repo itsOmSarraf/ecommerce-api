@@ -1,6 +1,9 @@
 # E-commerce API Project
 
-This project implements a RESTful API for a small e-commerce platform using TypeScript, Express, PostgreSQL, and Prisma ORM. The implementation focuses on clean architecture, proper error handling, and database optimization.
+A robust RESTful API for an e-commerce platform implementing clean architecture, proper error handling, and database optimization. This project was developed as part of an internship assignment for Imagined.
+
+## 🌐 Live API
+Base URL: https://ecommerce-api-6jmm.onrender.com
 
 ## 🛠 Technology Stack
 
@@ -9,7 +12,9 @@ This project implements a RESTful API for a small e-commerce platform using Type
 - **Framework**: Express.js
 - **Database**: PostgreSQL
 - **ORM**: Prisma
-- **Other Tools**: Docker (for PostgreSQL)
+- **Deployment**: Render
+- **Version Control**: Git
+- **Development Tools**: Docker (for local PostgreSQL)
 
 ## 📋 Features
 
@@ -25,7 +30,9 @@ This project implements a RESTful API for a small e-commerce platform using Type
 - Get total stock quantity across all products
 
 ### Order Management
-- Create new orders with automatic stock updates
+- Create new orders with two stock management approaches:
+  - Transaction-based (default)
+  - Optimistic locking (for high concurrency)
 - Update order details
 - Get order information
 - View orders from last 7 days
@@ -53,14 +60,14 @@ prisma/
 
 ### Prerequisites
 - Bun installed
-- Docker installed (for PostgreSQL)
-- PostgreSQL running on Docker
+- Docker installed (for local PostgreSQL)
+- Git
 
-### Setup Instructions
+### Local Development Setup
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone https://github.com/itsOmSarraf/ecommerce-api.git
 cd ecommerce-api
 ```
 
@@ -80,7 +87,7 @@ bunx prisma generate
 bunx prisma migrate dev
 ```
 
-5. Start the server:
+5. Start the development server:
 ```bash
 bun dev
 ```
@@ -91,110 +98,156 @@ bun dev
 
 ```bash
 # Create User
-POST /api/users
-{
+curl -X POST https://ecommerce-api-6jmm.onrender.com/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
     "name": "John Doe",
     "email": "john@example.com",
     "phone": "1234567890"
-}
+  }'
 
 # Get User
-GET /api/users/:id
+curl https://ecommerce-api-6jmm.onrender.com/api/users/:id
 
 # Update User
-PUT /api/users/:id
-{
+curl -X PUT https://ecommerce-api-6jmm.onrender.com/api/users/:id \
+  -H "Content-Type: application/json" \
+  -d '{
     "name": "John Updated"
-}
+  }'
 ```
 
 ### Product Endpoints
 
 ```bash
 # Create Product
-POST /api/products
-{
+curl -X POST https://ecommerce-api-6jmm.onrender.com/api/products \
+  -H "Content-Type: application/json" \
+  -d '{
     "name": "iPhone 15",
     "category": "Electronics",
     "price": 999.99,
     "stock": 50
-}
+  }'
 
 # Get Product
-GET /api/products/:id
+curl https://ecommerce-api-6jmm.onrender.com/api/products/:id
 
 # Update Product
-PUT /api/products/:id
-{
+curl -X PUT https://ecommerce-api-6jmm.onrender.com/api/products/:id \
+  -H "Content-Type: application/json" \
+  -d '{
     "price": 899.99
-}
+  }'
 
 # Get Total Stock
-GET /api/products/stock/total
+curl https://ecommerce-api-6jmm.onrender.com/api/products/stock/total
 ```
 
 ### Order Endpoints
 
 ```bash
-# Create Order
-POST /api/orders
-{
+# Create Order (Transaction-based)
+curl -X POST https://ecommerce-api-6jmm.onrender.com/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{
     "userId": "user_id",
     "productId": "product_id",
     "quantity": 2
-}
+  }'
+
+# Create Order (Optimistic Locking)
+curl -X POST https://ecommerce-api-6jmm.onrender.com/api/orders/optimistic \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user_id",
+    "productId": "product_id",
+    "quantity": 2
+  }'
 
 # Get Order
-GET /api/orders/:id
+curl https://ecommerce-api-6jmm.onrender.com/api/orders/:id
 
 # Update Order
-PUT /api/orders/:id
-{
+curl -X PUT https://ecommerce-api-6jmm.onrender.com/api/orders/:id \
+  -H "Content-Type: application/json" \
+  -d '{
     "quantity": 3
-}
+  }'
 
 # Get Recent Orders (Last 7 Days)
-GET /api/orders/recent/last7days
+curl https://ecommerce-api-6jmm.onrender.com/api/orders/recent/last7days
 
 # Get User's Orders
-GET /api/orders/user/:userId
+curl https://ecommerce-api-6jmm.onrender.com/api/orders/user/:userId
 
 # Get Product Buyers
-GET /api/orders/product/:productId/buyers
+curl https://ecommerce-api-6jmm.onrender.com/api/orders/product/:productId/buyers
 ```
 
 ## 💡 Technical Highlights
 
-1. **Transaction Management**: Implemented database transactions for order operations to ensure data consistency when updating product stock.
+### 1. Stock Management Approaches
 
-2. **Stock Management**: Two approaches for handling stock updates:
-   - Transaction-based approach for guaranteed consistency
-   - Optimistic locking approach for high-concurrency situations
+#### Transaction-based Approach (Default)
+- Uses Prisma transactions for atomicity
+- Locks relevant rows during operation
+- Guarantees data consistency
+- Best for typical e-commerce loads
+- Implemented at `/api/orders`
 
-3. **Database Optimization**:
-   - Proper indexing on foreign keys
-   - Efficient queries using Prisma's features
-   - Relationship management between entities
+```typescript
+const order = await prisma.$transaction(async (prisma) => {
+  const newOrder = await prisma.order.create({...});
+  await prisma.product.update({...});
+  return newOrder;
+});
+```
 
-4. **Error Handling**:
-   - Comprehensive error handling for all endpoints
-   - Proper HTTP status codes
-   - Informative error messages
+#### Optimistic Locking Approach
+- No database locks
+- Retries on conflicts (up to 3 times)
+- Better performance in high-concurrency situations
+- Implemented at `/api/orders/optimistic`
+
+```typescript
+while (retries > 0) {
+  try {
+    return await prisma.product.update({
+      where: {
+        id: productId,
+        stock: currentStock // Ensures stock hasn't changed
+      },
+      data: {...}
+    });
+  } catch (error) {
+    retries--;
+  }
+}
+```
+
+### 2. Database Optimization
+- Proper indexing on foreign keys
+- Efficient queries using Prisma's features
+- Transaction management for data consistency
+- Relationship management between entities
+
+### 3. Error Handling
+- Comprehensive error handling for all endpoints
+- Proper HTTP status codes
+- Informative error messages
+- Retry mechanism for optimistic locking
 
 ## 🔍 Assignment Requirements Fulfilled
 
 - ✅ User CRUD Operations
 - ✅ Product CRUD Operations
-- ✅ Order Management
+- ✅ Order Management with two stock update approaches
 - ✅ Recent Orders Query
 - ✅ User Orders Query
 - ✅ Product Buyers Query
 - ✅ Total Stock Query
-- ✅ Stock Update Handling
-
-## 🧪 Testing
-
-Test the API endpoints using cURL commands provided in the API documentation section or use API testing tools like Postman/Thunder Client.
+- ✅ Stock Update Handling (Both Transaction & Optimistic)
 
 ## 📚 Additional Notes
 
@@ -202,6 +255,7 @@ The project demonstrates:
 - Clean code architecture
 - RESTful API design principles
 - Database relationship management
+- Advanced transaction handling
+- Optimistic locking implementation
 - Proper error handling
-- Transaction management
-- Stock management strategies
+- Deployment best practices
