@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export const orderController = {
-	// Create order
+	// Transaction-based approach
 	async createOrder(req: Request, res: Response) {
 		try {
 			const { userId, productId, quantity } = req.body;
@@ -57,6 +57,84 @@ export const orderController = {
 			});
 
 			res.status(201).json(order);
+		} catch (error) {
+			console.error('Create order error:', error);
+			res.status(500).json({
+				error: 'Failed to create order'
+			});
+		}
+	},
+
+	// Optimistic locking approach
+	async createOrderOptimistic(req: Request, res: Response) {
+		try {
+			const { userId, productId, quantity } = req.body;
+			let retries = 3;
+
+			// Validate inputs
+			if (!userId || !productId || !quantity) {
+				return res.status(400).json({
+					error: 'Missing required fields'
+				});
+			}
+
+			while (retries > 0) {
+				// Get current product state
+				const product = await prisma.product.findUnique({
+					where: { id: productId }
+				});
+
+				if (!product) {
+					return res.status(404).json({
+						error: 'Product not found'
+					});
+				}
+
+				if (product.stock < quantity) {
+					return res.status(400).json({
+						error: 'Not enough stock available'
+					});
+				}
+
+				try {
+					// Try to update with optimistic locking
+					const result = await prisma.product.update({
+						where: {
+							id: productId,
+							stock: product.stock // This ensures stock hasn't changed
+						},
+						data: {
+							stock: product.stock - quantity,
+							orders: {
+								create: {
+									userId,
+									quantity
+								}
+							}
+						},
+						include: {
+							orders: {
+								take: 1,
+								orderBy: {
+									createdAt: 'desc'
+								}
+							}
+						}
+					});
+
+					return res.status(201).json(result.orders[0]);
+				} catch (error) {
+					retries--;
+					if (retries === 0) {
+						return res.status(409).json({
+							error:
+								'Failed to place order after multiple attempts due to concurrent updates'
+						});
+					}
+					// Wait a short time before retrying
+					await new Promise((resolve) => setTimeout(resolve, 100));
+				}
+			}
 		} catch (error) {
 			console.error('Create order error:', error);
 			res.status(500).json({
