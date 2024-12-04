@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes';
 import productRoutes from './routes/productRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Base route
 app.get('/', (req, res) => {
