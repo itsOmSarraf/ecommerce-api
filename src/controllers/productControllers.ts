@@ -112,5 +112,24 @@ export const productController = {
 				error: 'Failed to update product'
 			});
 		}
+	},
+	// Get total stock quantity
+	async getTotalStock(req: Request, res: Response) {
+		try {
+			const totalStock = await prisma.product.aggregate({
+				_sum: {
+					stock: true
+				}
+			});
+
+			res.json({
+				totalStock: totalStock._sum.stock || 0
+			});
+		} catch (error) {
+			console.error('Get total stock error:', error);
+			res.status(500).json({
+				error: 'Failed to get total stock quantity'
+			});
+		}
 	}
 };
